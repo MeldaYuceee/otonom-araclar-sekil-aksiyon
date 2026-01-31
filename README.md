@@ -1,56 +1,59 @@
 # Otonom Görev ve Şekil Aksiyonu
 
-Bu proje, Otonom Araçlar Topluluğu kapsamında verilen 2. Faz (Final) görevi için hazırlanmıştır.  
-Gazebo simülasyon ortamında bir drone’un kendi başına kalkış yapması, belirlenen rotayı takip etmesi ve kamerasıyla yerdeki şekilleri algılayarak buna göre hareket etmesi hedeflenmiştir.
+Bu proje, **Otonom Araçlar Topluluğu** kapsamında verilen **2. Faz (Final)** görevi için hazırlanmıştır.  
+Gazebo simülasyon ortamında bir drone’un kendi başına kalkış yapması, belirlenen rotayı takip etmesi ve kamerasıyla yerdeki şekilleri algılayarak buna göre aksiyon alması amaçlanmıştır.
 
 ---
 
 ## Görev Nasıl İlerliyor?
 
-Görev başladığında drone herhangi bir manuel kontrol olmadan havalanır ve 10 metre irtifaya çıkar.  
-Ardından simülasyon ortamında bulunan iki sanal direk arasından geçerek uçuşuna devam eder.
+Görev başladığında drone herhangi bir manuel kontrol olmadan havalanır ve **10 metre irtifaya** çıkar.  
+Ardından simülasyon ortamında bulunan **iki sanal direk** arasından geçerek uçuşuna devam eder.
 
-Uçuş sırasında kamera sürekli olarak zemini tarar. Drone, gördüğü şekle göre farklı davranacak şekilde programlanmıştır:
+Uçuş sırasında kamera sürekli olarak zemini tarar. Drone, tespit ettiği şekle göre farklı davranacak şekilde programlanmıştır:
 
-- **Kırmızı bir üçgen** tespit edildiğinde, şeklin tam üzerine doğru gider ve iniş yapar.
-- **Mavi bir altıgen** tespit edildiğinde, 3 metre irtifaya alçalır, 5 saniye bekler ve tekrar 10 metreye çıkarak görevine kaldığı yerden devam eder.
+- **Kırmızı bir üçgen** görüldüğünde, şeklin tam üzerine gider ve iniş yapar (LAND).
+- **Mavi bir altıgen** görüldüğünde, **3 metre irtifaya alçalır**, **5 saniye bekler** ve ardından tekrar **10 metreye çıkarak** görevine devam eder.
 
 ---
 
 ## Şekilleri Nasıl Tanıyor?
 
-Şekil tespiti için karmaşık yöntemler yerine, simülasyon ortamına uygun ve güvenilir bir yaklaşım tercih edildi.
+Şekil tespiti için, simülasyon ortamına uygun, sade ve güvenilir bir yöntem tercih edilmiştir.
 
-Önce kamera görüntüsü HSV renk uzayına çevrildi ve kırmızı ile mavi renkler maske kullanılarak ayrıldı.  
-Daha sonra bu alanlar üzerinde kontur analizi yapıldı ve küçük, anlamlı olmayan bölgeler elendi.
+Öncelikle kamera görüntüsü **HSV renk uzayına** çevrilmiş ve kırmızı ile mavi renkler maske kullanılarak ayrılmıştır.  
+Daha sonra bu maskeler üzerinde **kontur analizi** yapılmış ve küçük, anlamlı olmayan bölgeler elenmiştir.
 
-Son aşamada konturlar sadeleştirildi ve köşe sayılarına bakılarak şekil ayrımı yapıldı:
-- 3 köşe → üçgen  
-- 5–7 köşe → altıgen  
+Son aşamada konturlar sadeleştirilmiş ve köşe sayılarına bakılarak şekil ayrımı yapılmıştır:
+- 3 köşe → **Üçgen**
+- 5–7 köşe → **Altıgen**
 
-Bu yöntem hem hızlı çalışıyor hem de simülasyon ortamında oldukça kararlı sonuçlar veriyor. Ayrıca ekstra bir veri seti ya da eğitim süreci gerektirmiyor.
+Bu yaklaşım, simülasyon ortamında renklerin net olması sayesinde hızlı ve kararlı sonuçlar vermiştir. Ayrıca ek bir veri seti veya eğitim sürecine ihtiyaç duyulmamaktadır.
 
 ---
 
-## Ek Görev (Benim İçin)
+## Ek Görev (Melda İçin)
 
-Ek gereksinim olarak, drone’un görev sırasında hangi aşamada olduğunu göstermek gerekiyordu.  
-Bunun için PyQt gibi bir arayüz eklemek yerine, durumu doğrudan terminal üzerinden yazdırmayı tercih ettim.
+Ek görev kapsamında, sistemin görev sırasında hangi aşamada olduğunu göstermek için **iki seçenek** sunulmuştur:  
+**basit bir PyQt arayüzü** veya **terminal çıktısı**.
 
-Görev ilerledikçe terminalde şu tür çıktılar görülüyor:
+Bu projede, görev akışını daha sade ve doğrudan takip edebilmek amacıyla **terminal üzerinden durum çıktısı verme yöntemi** tercih edilmiştir.  
+Drone’un yaptığı tüm işlemler terminalde `STATE=...` formatında yazdırılmaktadır.
+
+Örnek durumlar:
 - TAKEOFF  
 - NAVIGATION  
 - SEARCHING  
 - DESCENDING  
 - LANDING  
 
-Bu sayede drone’un ne yaptığını anlık olarak takip etmek mümkün oluyor ve debug süreci de kolaylaşıyor.
+Bu sayede sistemin hangi aşamada olduğu anlık olarak takip edilebilmekte ve debug süreci kolaylaşmaktadır.
 
 ---
 
 ## Çalıştırma
 
-Gazebo ve ArduPilot SITL çalışır durumdayken aşağıdaki komut ile görev başlatılır:
+Gazebo ve ArduPilot SITL çalışır durumdayken görev aşağıdaki komut ile başlatılır:
 
 ```bash
 cd ~/ardupilot/ArduCopter
