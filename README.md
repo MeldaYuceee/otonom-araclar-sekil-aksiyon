@@ -1,96 +1,57 @@
-# Otonom Görev ve Şekil Aksiyonu  
-*(Gazebo + ArduPilot SITL + DroneKit + ROS + OpenCV)*
+# Otonom Görev ve Şekil Aksiyonu
 
-Bu proje, **Otonom Araçlar Topluluğu** kapsamında verilen **2. Faz (Final) görevleri** doğrultusunda geliştirilmiştir.  
-Çalışmanın amacı, Gazebo simülasyon ortamında bir drone’un **tamamen otonom** şekilde uçuş gerçekleştirmesi, kamerası aracılığıyla zemindeki şekilleri algılaması ve algılanan şekle göre **önceden tanımlanmış aksiyonları** yerine getirmesidir.
-
----
-
-## Görev Senaryosu
-
-Drone, görev boyunca herhangi bir manuel müdahale olmadan aşağıdaki adımları sırasıyla gerçekleştirir:
-
-- **Otonom Kalkış**  
-  Drone, sistem başlatıldıktan sonra otomatik olarak **10 metre irtifaya** kalkış yapar.
-
-- **Seyrüsefer**  
-  Simülasyon ortamında yer alan iki sanal direk (direk ↔ direk_0) arasından geçerek belirlenen güzergâhı takip eder.
-
-- **Arama ve Tarama**  
-  Seyir esnasında, altındaki zemin üzerinde rastgele yerleştirilmiş geometrik şekilleri kamerası ile tarar.
-
-- **Şekle Göre Aksiyon**  
-  Kamera görüntüsünden elde edilen verilere göre:
-  - **Kırmızı Üçgen** tespit edilirse, drone şeklin tam üzerine konumlanır ve **LAND** komutu ile iniş yapar.
-  - **Mavi Altıgen** tespit edilirse, drone **3 metre irtifaya alçalır**, **5 saniye bekler**, ardından tekrar **10 metreye yükselerek** görevine devam eder.
+Bu proje, Otonom Araçlar Topluluğu kapsamında verilen 2. Faz (Final) görevi için hazırlanmıştır.  
+Gazebo simülasyon ortamında bir drone’un kendi başına kalkış yapması, belirlenen rotayı takip etmesi ve kamerasıyla yerdeki şekilleri algılayarak buna göre hareket etmesi hedeflenmiştir.
 
 ---
 
-## Sistem Durumu Bildirimi
+## Görev Nasıl İlerliyor?
 
-Görev boyunca drone’un mevcut durumu terminal üzerinden anlık olarak yazdırılmaktadır.  
-Örnek durum çıktıları:
+Görev başladığında drone herhangi bir manuel kontrol olmadan havalanır ve 10 metre irtifaya çıkar.  
+Ardından simülasyon ortamında bulunan iki sanal direk arasından geçerek uçuşuna devam eder.
 
-- `STATE=TAKEOFF`
-- `STATE=NAVIGATION`
-- `STATE=SEARCHING`
-- `STATE=DESCENDING`
-- `STATE=LANDING`
+Uçuş sırasında kamera sürekli olarak zemini tarar. Drone, gördüğü şekle göre farklı davranacak şekilde programlanmıştır:
 
-Bu çıktı mekanizması, **“sistemin durumunu gösterme”** gereksinimini karşılamak amacıyla eklenmiştir.
+- **Kırmızı bir üçgen** tespit edildiğinde, şeklin tam üzerine doğru gider ve iniş yapar.
+- **Mavi bir altıgen** tespit edildiğinde, 3 metre irtifaya alçalır, 5 saniye bekler ve tekrar 10 metreye çıkarak görevine kaldığı yerden devam eder.
 
 ---
 
-## Dosya Yapısı ve Açıklamaları
+## Şekilleri Nasıl Tanıyor?
 
-- `phase2_mission.py`  
-  2. Faz final senaryosunun tamamını içeren ana görev dosyası  
-  (10 m kalkış, direkler arası geçiş, tarama ve şekle göre aksiyonlar).
+Şekil tespiti için karmaşık yöntemler yerine, simülasyon ortamına uygun ve güvenilir bir yaklaşım tercih edildi.
 
-- `pole_nav_v2.py`  
-  Birinci aşama testleri için kullanılan, direkler arası otonom geçiş senaryosu.
+Önce kamera görüntüsü HSV renk uzayına çevrildi ve kırmızı ile mavi renkler maske kullanılarak ayrıldı.  
+Daha sonra bu alanlar üzerinde kontur analizi yapıldı ve küçük, anlamlı olmayan bölgeler elendi.
 
-- `axis_probe_air3.py`  
-  Gazebo koordinat sistemi ile drone’un local NED eksenleri arasındaki ilişkiyi doğrulamak için geliştirilmiş test dosyası.
+Son aşamada konturlar sadeleştirildi ve köşe sayılarına bakılarak şekil ayrımı yapıldı:
+- 3 köşe → üçgen  
+- 5–7 köşe → altıgen  
 
-- `hover_debug_shape.py`  
-  Şekil tespiti sırasında HSV maskeleme ve piksel yoğunluğu (red_px / blue_px) analizlerinin yapıldığı debug dosyası.
-
-- `RAPOR.md`  
-  Şekil tespitinde kullanılan yöntemlerin (renk filtresi, kontur analizi) nedenleriyle birlikte açıklandığı kısa teknik rapor.
-
-- `requirements.txt`  
-  Python bağımlılıkları.
+Bu yöntem hem hızlı çalışıyor hem de simülasyon ortamında oldukça kararlı sonuçlar veriyor. Ayrıca ekstra bir veri seti ya da eğitim süreci gerektirmiyor.
 
 ---
 
-## Kullanılan Yöntem
+## Ek Görev (Benim İçin)
 
-Şekil tespiti için **OpenCV** kullanılarak:
-- HSV renk uzayında **renk filtresi** uygulanmış,
-- Filtrelenen alanlar üzerinde **kontur analizi** ile şekil doğrulaması yapılmıştır.
+Ek gereksinim olarak, drone’un görev sırasında hangi aşamada olduğunu göstermek gerekiyordu.  
+Bunun için PyQt gibi bir arayüz eklemek yerine, durumu doğrudan terminal üzerinden yazdırmayı tercih ettim.
 
-Bu yöntem, simülasyon ortamında ışık koşullarının sabit olması nedeniyle **hızlı, kararlı ve düşük hesaplama maliyetli** bir çözüm sunduğu için tercih edilmiştir.
+Görev ilerledikçe terminalde şu tür çıktılar görülüyor:
+- TAKEOFF  
+- NAVIGATION  
+- SEARCHING  
+- DESCENDING  
+- LANDING  
+
+Bu sayede drone’un ne yaptığını anlık olarak takip etmek mümkün oluyor ve debug süreci de kolaylaşıyor.
 
 ---
 
-## Gereksinimler
+## Çalıştırma
 
-- Ubuntu  
-- ROS Noetic  
-- Gazebo (ROS API Plugin)  
-- ArduPilot SITL (ArduCopter)  
-- Python 3  
+Gazebo ve ArduPilot SITL çalışır durumdayken aşağıdaki komut ile görev başlatılır:
 
-Kamera topic’i:
-/iris_demo/gimbal_camera/image_raw
-
-
-Python bağımlılıkları:
 ```bash
-pip3 install -r requirements.txt
-
-
-
-
-
+cd ~/ardupilot/ArduCopter
+python3 -u phase2_mission.py --connect 127.0.0.1:14550
