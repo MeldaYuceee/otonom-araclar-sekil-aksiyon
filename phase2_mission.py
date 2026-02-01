@@ -18,12 +18,14 @@ import cv2
 import numpy as np
 
 
+# -------------------- Sabitler (senaryon ile aynı) --------------------
 MODEL_DRONE = "iris_demo"
 MODEL_A = "direk"
 MODEL_B = "direk_0"
 MODEL_HEX = "mavi_altigen"
 MODEL_TRI = "kirmizi_ucgen"
 
+# Sende KESİN doğru kamera topic'i:
 IMAGE_TOPIC = "/iris_demo/gimbal_camera/image_raw"
 
 TAKEOFF_ALT_M = 10.0
@@ -44,6 +46,7 @@ RED_STABLE_FRAMES = 3
 
 SETPOINT_HZ = 5.0
 
+# HSV eşikleri (sahnen için uygun)
 HSV_RED1_LOW = (0, 70, 60)
 HSV_RED1_HIGH = (10, 255, 255)
 HSV_RED2_LOW = (170, 70, 60)
@@ -54,8 +57,23 @@ HSV_BLUE_HIGH = (130, 255, 255)
 
 MIN_AREA_PX = 300
 EPS_FRACTION = 0.02
-HEX_VERT_RANGE = (5, 7)
-TRI_VERT_SET = {3, 4}
+HEX_VERT_RANGE = (5, 7)     # approx köşe sayısı
+TRI_VERT_SET = {3, 4}       # üçgen (ve bazen 4 köşeye indirgenebilir)
+
+
+# -------------------- Yardımcılar --------------------
+def normalize_conn(conn_str: str) -> str:
+    """
+    Kullanıcı '127.0.0.1:14550' yazsa bile, bağlantıyı doğru protokolle kur.
+    MAVProxy default'u UDP:14550 olduğu için prefix yoksa 'udp:' ekleriz.
+    """
+    if not conn_str:
+        return "udp:127.0.0.1:14550"
+    lower = conn_str.lower()
+    if lower.startswith("udp:") or lower.startswith("tcp:") or lower.startswith("com") or lower.startswith("serial:"):
+        return conn_str
+    # prefix yoksa UDP kabul et
+    return f"udp:{conn_str}"
 
 
 @dataclass
@@ -428,16 +446,20 @@ class Phase2Mission:
             idx = (idx + 1) % len(scan_route)
 
 
+# -------------------- main --------------------
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--connect", default="127.0.0.1:14550")
+    # Varsayılanı UDP yapıyoruz (MAVProxy default)
+    parser.add_argument("--connect", default="udp:127.0.0.1:14550")
     args = parser.parse_args()
 
+    conn = normalize_conn(args.connect)
     rospy.init_node("phase2_mission_node", anonymous=True)
-    rospy.loginfo(f"DroneKit bağlanıyor: {args.connect}")
+    rospy.loginfo(f"DroneKit bağlanıyor: {conn}")
 
-    vehicle = connect(args.connect, wait_ready=True, timeout=60)
+    # DroneKit bağlantısı
+    vehicle = connect(conn, wait_ready=True, timeout=60)
 
     ned = NEDController(vehicle)
     if not ned.wait_for_local_origin(30):
